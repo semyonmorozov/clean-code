@@ -57,9 +57,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MarkValidator.cs" />
     <Compile Include="Md.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Renderer.cs" />
+    <Compile Include="RenderingRule.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

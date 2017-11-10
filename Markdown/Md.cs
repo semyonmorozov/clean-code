@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -6,34 +7,44 @@ namespace Markdown
 {
 	public class Md
 	{
-	    private List<Renderer> prioriyOfRenderers;
-        
-	    public string RenderToHtml(string markdown)
+	    private readonly List<RenderingRule> renderingRules;
+        private readonly MarkValidator markValidator;
+
+        public static List<RenderingRule> HtmlRules = new List<RenderingRule>
+        {
+            new RenderingRule("_","<em>","</em>",1),
+            new RenderingRule("__","<strong>","</strong>",2)
+        };
+
+	    public static List<RenderingRule> CreoleRules = new List<RenderingRule>
 	    {
-	        prioriyOfRenderers = new List<Renderer>
-	        {
-	            new Renderer("_", "<em>", "</em>"),
-	            new Renderer("__", "<strong>","</strong>")
-	        };
-	        return Render(markdown);
+	        new RenderingRule("_","//","//",1),
+	        new RenderingRule("__","**","**",1)
+	    };
+
+        public Md(List<RenderingRule> renderingRules)
+	    {
+	        this.renderingRules = renderingRules;
+	        var marks = renderingRules.Select(r => r.Mark).ToList();
+            markValidator = new MarkValidator(marks);
 	    }
 
-	    private string Render(string markdown)
+	    public string Render(string markdown)
 		{
             for (var numOfChar=0;numOfChar<markdown.Length;numOfChar++)
             {
-                foreach (var render in prioriyOfRenderers)
+                foreach (var rule in renderingRules)
                 {
-                    if (render.TrySetStartOfSelection(markdown, numOfChar))
+                    if (TrySetStartMark(rule, markdown, numOfChar))
                     {
-                        numOfChar += render.Mark.Length-1;
+                        numOfChar += rule.Mark.Length-1;
                         break;
                     }
-                    if (render.TrySetEndOfSelection(markdown, numOfChar))
+                    if (TrySetEndMark(rule, markdown, numOfChar))
                     {
-                        string partiallyREnderedText = render.Render(markdown);
-                        numOfChar += partiallyREnderedText.Length-markdown.Length-1;
-                        markdown = partiallyREnderedText;
+                        var partiallyRenderedText = rule.Render(markdown);
+                        numOfChar += partiallyRenderedText.Length-markdown.Length-1;
+                        markdown = partiallyRenderedText;
                         break;
                     }
                 }
@@ -41,9 +52,22 @@ namespace Markdown
 
             return markdown;
 		}
-    }
 
-    
+        private bool TrySetStartMark(RenderingRule rule, string rawText, int numOfChar)
+        {
+            if (!markValidator.IsValidStartMark(rule.Mark, rawText, numOfChar)) return false;
+	        rule.StartOfSelection = numOfChar;
+	        return true;
+	    }
+
+        private bool TrySetEndMark(RenderingRule rule, string rawText, int numOfChar)
+	    {
+	        if (rule.StartOfSelection == -1) return false;
+            if (!markValidator.IsValidEndMark(rule.Mark, rawText, numOfChar)) return false;
+            rule.EndOfSelection = numOfChar + rule.Mark.Length;
+            return true;
+	    }
+    }
 
     [TestFixture]
 	public class Md_Should
@@ -53,7 +77,7 @@ namespace Markdown
         [SetUp]
 	    public void Init()
 	    {
-	        md = new Md();
+	        md = new Md(Md.HtmlRules);
 	    }
 
         [Test]
@@ -61,14 +85,14 @@ namespace Markdown
 	    {
 	        var rawText = "Текст _окруженный с двух сторон_  одинарными символами подчерка";
 	        var expectedStr = "Текст <em>окруженный с двух сторон</em>  одинарными символами подчерка";
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
 	    }
 
 	    [TestCase(@"\_Вот это\_, не должно выделиться тегом <em>")]
 	    [TestCase(@"\_\_А это\_\_, не должно выделиться тегом <strong>")]
         public void Render_EscapedMark_AsCharacter(string rawText)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(rawText);
+	        md.Render(rawText).Should().Be(rawText);
 	    }
 
         [Test]
@@ -77,7 +101,7 @@ namespace Markdown
 	        var rawText = "__Двумя символами__ — должен становиться жирным";
 	        var expectedStr = "<strong>Двумя символами</strong> — должен становиться жирным";
 
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
         }
 
 	    [Test]
@@ -85,7 +109,7 @@ namespace Markdown
 	    {
 	        var rawText = "Внутри __двойного выделения _одинарное_ тоже__ работает.";
 	        var expectedStr = "Внутри <strong>двойного выделения <em>одинарное</em> тоже</strong> работает.";
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
 	    }
 
 	    [Test]
@@ -93,14 +117,14 @@ namespace Markdown
 	    {
 	        var rawText = "Но не наоборот — внутри _одинарного __двойное__ не работает_.";
 	        var expectedStr = "Но не наоборот — внутри <em>одинарного двойное не работает</em>.";
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
 	    }
 
 	    [Test]
 	    public void NotRenderMakr_InsideTextWithNums()
 	    {
 	        var rawText = "Подчерки внутри текста c цифрами_12_3 не считаются выделением";
-	        md.RenderToHtml(rawText).Should().Be(rawText);
+	        md.Render(rawText).Should().Be(rawText);
 	    }
 
         [Test]
@@ -108,35 +132,35 @@ namespace Markdown
 	    {
 	        var rawText = "__непарные _символы не считаются выделением";
 	        var expectedStr = "__непарные _символы не считаются выделением";
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
         }
         
 	    [TestCase("Это_ простая_ строка для тестирования.")]
 	    [TestCase("Это__ простая__ строка для тестирования.")]
         public void NotRender_FinalMark_WithoutWhitespaceAfterIt(string rawText)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(rawText);
+	        md.Render(rawText).Should().Be(rawText);
         }
 	    
 	    [TestCase("Это _простая _строка для тестирования.")]
 	    [TestCase("Это __простая __строка для тестирования.")]
 	    public void NotRender_InitialMark_WithoutWhitespaceBeforeIt(string rawText)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(rawText);
+	        md.Render(rawText).Should().Be(rawText);
         }
 	    
 	    [TestCase("Это _простая_ строка_ для тестирования.", "Это <em>простая</em> строка_ для тестирования.")]
 	    [TestCase("Это __простая__ строка__ для тестирования.", "Это <strong>простая</strong> строка__ для тестирования.")]
         public void Consider_LeftmostFinalMark_AsEndOfSelection(string rawText,string expectedStr)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
         }
 	    
 	    [TestCase("Это _простая _строка_, для тестирования.", "Это _простая <em>строка</em>, для тестирования.")]
 	    [TestCase("Это __простая __строка__ для тестирования.", "Это __простая <strong>строка</strong> для тестирования.")]
 	    public void Consider_RightmostInitialMark_AsStartOfSelection(string rawText, string expectedStr)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
 	    }
 
 	    [TestCase("__запятая__,", "<strong>запятая</strong>,")]
@@ -151,14 +175,14 @@ namespace Markdown
 	    [TestCase(@"\__escape-символом_\_", @"\_<em>escape-символом</em>\_")]
         public void Render_Punctuation_SimilarToSpaces(string rawText, string expectedStr)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
         }
 
 	    [TestCase("Это __простая _строка__ для_ тестирования.", "Это простая <em>строка для</em> тестирования.")]
 	    [TestCase("Это _простая __строка_ для__ тестирования.", "Это <em>простая строка</em> для тестирования.")]
         public void Render_OnlyEmphasizedText_WhenItIntersects_WithImportantText(string rawText, string expectedStr)
 	    {
-	        md.RenderToHtml(rawText).Should().Be(expectedStr);
+	        md.Render(rawText).Should().Be(expectedStr);
         }
         
     }
