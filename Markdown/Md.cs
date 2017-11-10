@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
+﻿using System.Collections.Generic;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -10,17 +7,18 @@ namespace Markdown
 	public class Md
 	{
 	    private List<Renderer> prioriyOfRenderers;
-
-	    public Md()
+        
+	    public string RenderToHtml(string markdown)
 	    {
 	        prioriyOfRenderers = new List<Renderer>
 	        {
-	            new Renderer("_", "em"),
-	            new Renderer("__", "strong")
+	            new Renderer("_", "<em>", "</em>"),
+	            new Renderer("__", "<strong>","</strong>")
 	        };
-        }
+	        return Render(markdown);
+	    }
 
-	    public string RenderToHtml(string markdown)
+	    private string Render(string markdown)
 		{
             for (var numOfChar=0;numOfChar<markdown.Length;numOfChar++)
             {
