@@ -84,12 +84,18 @@ namespace Markdown
 
         private bool IsValidEndEnvironment(string mark, string rawText, int numOfChar)
         {
-            var externalChar = rawText[numOfChar + mark.Length];
-            var internalChar = rawText[numOfChar - 1];
-
-            if (numOfChar != rawText.Length - 1)
+            if (numOfChar + mark.Length + 1 < rawText.Length)
+            {
+                var externalChar = rawText[numOfChar + mark.Length];
                 if (!IsAcceptedExternalChar(externalChar)) return false;
-            if (!IsAcceptedInternalChar(internalChar)) return false;
+            }
+
+            if (numOfChar != 0)
+            {
+                var internalChar = rawText[numOfChar - 1];
+                if (!IsAcceptedInternalChar(internalChar)) return false;
+            }
+            
             return true;
         }
 
