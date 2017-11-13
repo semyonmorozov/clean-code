@@ -25,8 +25,7 @@ namespace Markdown
         public Md(List<RenderingRule> renderingRules)
 	    {
 	        this.renderingRules = renderingRules;
-	        var marks = renderingRules.Select(r => r.Mark).ToList();
-            markValidator = new MarkValidator(marks);
+            markValidator = new MarkValidator(renderingRules);
 	    }
 
 	    public string Render(string markdown)
