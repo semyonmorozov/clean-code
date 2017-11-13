@@ -21,31 +21,12 @@ namespace Markdown
             PriorityLevel = priorotyLevel;
         }
 
-        public string Render(string rawText)
+        public void ResetSelection()
         {
-            var selection = GetSelection(rawText);
-            var tagedSelection = ReplaceMarksToTags(selection);
-            var renderedText = rawText.Remove(StartOfSelection, EndOfSelection - StartOfSelection)
-                .Insert(StartOfSelection, tagedSelection);
-
             StartOfSelection = -1;
             EndOfSelection = -1;
-
-            return renderedText;
-        }
-
-        private string GetSelection(string rawText)
-        {
-            var selection = rawText.Substring(StartOfSelection, EndOfSelection - StartOfSelection);
-            return selection;
-        }
-
-        private string ReplaceMarksToTags(string selection)
-        {
-            selection = selection.Substring(Mark.Length);
-            selection = selection.Substring(0, selection.Length - Mark.Length);
-            var tagedSelection = String.Concat(OpeningTag, selection, ClosingTag);
-            return tagedSelection;
         }
     }
+
+    
 }

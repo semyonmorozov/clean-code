@@ -6,36 +6,10 @@ namespace Markdown
 {
     class MarkValidator
     {
-        private readonly List<RenderingRule> renderingRules;
         private readonly List<String> marks;
-        public MarkValidator(List<RenderingRule> renderingRules)
+        public MarkValidator(List<string> marks)
         {
-            this.renderingRules = renderingRules;
-            marks = renderingRules.Select(r => r.Mark).ToList();
-        }
-
-
-        public bool TrySetStartMark(string rawText, int numOfChar)
-        {
-            foreach (var rule in renderingRules)
-            {
-                if (!IsValidStartMark(rule.Mark, rawText, numOfChar)) return false;
-                rule.StartOfSelection = numOfChar;
-                return true;
-            }
-            return false;
-        }
-
-        public bool TrySetEndMark( string rawText, int numOfChar)
-        {
-            foreach (var rule in renderingRules)
-            {
-                if (rule.StartOfSelection == -1) return false;
-                if (!IsValidEndMark(rule.Mark, rawText, numOfChar)) return false;
-                rule.EndOfSelection = numOfChar + rule.Mark.Length;
-                return true;
-            }
-            return false;
+            this.marks = marks;
         }
 
         public bool IsValidStartMark(string mark, string rawText, int numOfChar)

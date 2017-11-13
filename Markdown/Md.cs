@@ -10,13 +10,13 @@ namespace Markdown
 	    private readonly List<RenderingRule> renderingRules;
         private readonly MarkValidator markValidator;
 
-        public static List<RenderingRule> HtmlRules = new List<RenderingRule>
+        public static List<RenderingRule> HTML_RULES = new List<RenderingRule>
         {
             new RenderingRule("_","<em>","</em>",1),
             new RenderingRule("__","<strong>","</strong>",2)
         };
 
-	    public static List<RenderingRule> CreoleRules = new List<RenderingRule>
+	    public static List<RenderingRule> CREOLE_RULES = new List<RenderingRule>
 	    {
 	        new RenderingRule("_","//","//",1),
 	        new RenderingRule("__","**","**",1)
@@ -25,7 +25,7 @@ namespace Markdown
         public Md(List<RenderingRule> renderingRules)
 	    {
 	        this.renderingRules = renderingRules;
-            markValidator = new MarkValidator(renderingRules);
+            markValidator = new MarkValidator(renderingRules.Select(r=>r.Mark).ToList());
 	    }
 
 	    public string Render(string markdown)
@@ -34,16 +34,11 @@ namespace Markdown
             {
                 foreach (var rule in renderingRules)
                 {
-                    if (TrySetStartMark(rule, markdown, numOfChar))
-                    {
-                        numOfChar += rule.Mark.Length-1;
-                        break;
-                    }
+                    if (TrySetStartMark(rule, markdown, numOfChar)) break;
+                    
                     if (TrySetEndMark(rule, markdown, numOfChar))
                     {
-                        var partiallyRenderedText = rule.Render(markdown);
-                        numOfChar += partiallyRenderedText.Length-markdown.Length-1;
-                        markdown = partiallyRenderedText;
+                        markdown = RenderWithPriority(rule, markdown);
                         break;
                     }
                 }
@@ -51,6 +46,38 @@ namespace Markdown
 
             return markdown;
 		}
+
+	    private string RenderWithPriority(RenderingRule rule, string rawText)
+	    {
+	        string renderedText;
+            
+            var selection = new Renderer(rule, rawText).GetSelection();
+	        foreach (var r in renderingRules)
+	        {
+	            if (selection.Contains(r.ClosingTag)&&!selection.Contains(r.OpeningTag))
+	            {
+	                rule.StartOfSelection += r.OpeningTag.Length-1;
+                    return new Renderer(rule,rawText).DeleteMarks();
+                }
+            }
+	        var renderer = new Renderer(rule, rawText);
+
+            if (renderingRules.Where(r => r.StartOfSelection != -1).Any(r => r.PriorityLevel < rule.PriorityLevel))
+	        {
+	            var endOfSelection = rule.EndOfSelection;
+	            var startOfSelection = rule.StartOfSelection;
+	            renderedText = renderer.DeleteMarks();
+	            var elapsedRules = renderingRules.Where(r => (r.StartOfSelection < endOfSelection) &&
+	                                                (r.StartOfSelection > startOfSelection)).ToList();
+	            foreach (var r in elapsedRules)
+	                r.StartOfSelection -= rule.Mark.Length;
+	            return renderedText;
+            }
+	        
+	        renderedText = renderer.Render();
+	        rule.ResetSelection();
+	        return renderedText;
+        }
 
         private bool TrySetStartMark(RenderingRule rule, string rawText, int numOfChar)
         {
@@ -76,7 +103,7 @@ namespace Markdown
         [SetUp]
 	    public void Init()
 	    {
-	        md = new Md(Md.HtmlRules);
+	        md = new Md(Md.HTML_RULES);
 	    }
 
         [Test]
@@ -97,8 +124,8 @@ namespace Markdown
         [Test]
 	    public void RenderImportantText()
 	    {
-	        var rawText = "__Двумя символами__ — должен становиться жирным";
-	        var expectedStr = "<strong>Двумя символами</strong> — должен становиться жирным";
+	        var rawText = "__Двумя символами__ — должен __становиться__ жирным";
+	        var expectedStr = "<strong>Двумя символами</strong> — должен <strong>становиться</strong> жирным";
 
 	        md.Render(rawText).Should().Be(expectedStr);
         }
@@ -171,7 +198,7 @@ namespace Markdown
 	    [TestCase("__восклицание__!", "<strong>восклицание</strong>!")]
 	    [TestCase("_знак вопроса_?", "<em>знак вопроса</em>?")]
 	    [TestCase("__точка__.", "<strong>точка</strong>.")]
-	    [TestCase(@"\__escape-символом_\_", @"\_<em>escape-символом</em>\_")]
+	    [TestCase(@"_\_escape-символом_\_", @"_\<em>escape-символом</em>\_")]
         public void Render_Punctuation_SimilarToSpaces(string rawText, string expectedStr)
 	    {
 	        md.Render(rawText).Should().Be(expectedStr);
