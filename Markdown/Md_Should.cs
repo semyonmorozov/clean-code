@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -133,12 +134,10 @@ namespace Markdown
     [TestFixture]
     public class Md_Should_Have_LinearComplexity
     {
-        private Stopwatch stopWatch;
         private Md md;
         [SetUp]
         public void SetUp()
         {
-            stopWatch = new Stopwatch();
             var htmlRules = new List<RenderingRule>
             {
                 new RenderingRule("_","<em>","</em>",1),
@@ -147,46 +146,31 @@ namespace Markdown
             md = new Md(htmlRules);
         }
 
-        [Test]
+        [Test, MaxTime(30)]
         public void OnShortString()
         {
             var rawString = ReadStringFromResource("StringsForTests.7000 chars.txt");
-            stopWatch.Start();
-            var renderedText = md.Render(rawString);
-            stopWatch.Stop();
-            var ts = stopWatch.ElapsedMilliseconds;
-            TestContext.WriteLine("Runtime: " + ts + "ms");
-            ts.Should().BeLessThan(20);
+            md.Render(rawString);
         }
 
-        [Test]
+        [Test, MaxTime(300)]
         public void OnLongString()
         {
             var rawString = ReadStringFromResource("StringsForTests.70 000 chars.txt");
-            stopWatch.Start();
-            var renderedText = md.Render(rawString);
-            stopWatch.Stop();
-            var ts = stopWatch.ElapsedMilliseconds;
-            TestContext.WriteLine("Runtime: " + ts + "ms");
-            ts.Should().BeLessThan(200);
+            md.Render(rawString);
         }
 
-        [Test]
+        [Test, MaxTime(5000)]
         public void OnVeryLongString()
         {
             var rawString = ReadStringFromResource("StringsForTests.350 000 chars.txt");
-            stopWatch.Start();
-            var renderedText = md.Render(rawString);
-            stopWatch.Stop();
-            var ts = stopWatch.ElapsedMilliseconds;
-            TestContext.WriteLine("Runtime: " + ts + "ms");
-            ts.Should().BeLessThan(4500);
+            md.Render(rawString);
         }
 
 
         private string ReadStringFromResource(string resourceName)
         {
-            var text = "";
+            var builder = new StringBuilder("");
             var assembly = Assembly.GetExecutingAssembly();
             using (var textStreamReader =
                 new StreamReader(assembly.GetManifestResourceStream("Markdown." + resourceName)))
@@ -195,12 +179,11 @@ namespace Markdown
                 {
                     string temp = textStreamReader.ReadLine();
                     if (temp == null) break;
-                    text += temp;
+                    builder.Append(temp);
                 }
             }
 
-
-            return text;
+            return builder.ToString();
         }
 
     }
