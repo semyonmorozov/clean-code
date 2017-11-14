@@ -1,44 +1,36 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using FluentAssertions;
 using NUnit.Framework;
 
 namespace Markdown
 {
-	public class Md
+	class Md
 	{
-	    private readonly List<RenderingRule> renderingRules;
         private readonly MarkValidator markValidator;
-
-        public static List<RenderingRule> HTML_RULES = new List<RenderingRule>
-        {
-            new RenderingRule("_","<em>","</em>",1),
-            new RenderingRule("__","<strong>","</strong>",2)
-        };
-
-	    public static List<RenderingRule> CREOLE_RULES = new List<RenderingRule>
-	    {
-	        new RenderingRule("_","//","//",1),
-	        new RenderingRule("__","**","**",1)
-	    };
-
+        private readonly Renderer renderer;
+        
         public Md(List<RenderingRule> renderingRules)
 	    {
-	        this.renderingRules = renderingRules;
-            markValidator = new MarkValidator(renderingRules.Select(r=>r.Mark).ToList());
+            markValidator = new MarkValidator(renderingRules.Select(r => r.Mark).ToList());
+            renderer = new Renderer(renderingRules);
 	    }
 
 	    public string Render(string markdown)
 		{
-            for (var numOfChar=0;numOfChar<markdown.Length;numOfChar++)
+            for (var numOfChar=0; numOfChar < markdown.Length; numOfChar++)
             {
-                foreach (var rule in renderingRules)
+                foreach (var rule in renderer.RenderingRules)
                 {
-                    if (TrySetStartMark(rule, markdown, numOfChar)) break;
+                    if (rule.TrySetStartMark(markValidator, markdown, numOfChar)) break;
                     
-                    if (TrySetEndMark(rule, markdown, numOfChar))
+                    if (rule.TrySetEndMark(markValidator, markdown, numOfChar))
                     {
-                        markdown = RenderWithPriority(rule, markdown);
+                        markdown = renderer.RenderWithPriority(rule, markdown);
                         break;
                     }
                 }
@@ -53,10 +45,15 @@ namespace Markdown
 	    private Md md;
 
         [SetUp]
-	    public void Init()
+	    public void SetUp()
 	    {
-	        md = new Md(Md.HTML_RULES);
-	    }
+	        var htmlRules = new List<RenderingRule>
+	        {
+	            new RenderingRule("_","<em>","</em>",1),
+	            new RenderingRule("__","<strong>","</strong>",2)
+	        };
+            md = new Md(htmlRules);
+        }
 
         [Test]
 	    public void RenderEmphasizedText()
@@ -162,7 +159,6 @@ namespace Markdown
 	    {
 	        md.Render(rawText).Should().Be(expectedStr);
         }
-        
 
     }
 

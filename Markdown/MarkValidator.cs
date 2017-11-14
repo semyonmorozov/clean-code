@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 
 namespace Markdown
 {
     class MarkValidator
     {
-        private readonly List<String> marks;
+        private readonly List<string> marks;
         public MarkValidator(List<string> marks)
         {
             this.marks = marks;
@@ -14,16 +12,14 @@ namespace Markdown
 
         public bool IsValidStartMark(string mark, string rawText, int numOfChar)
         {
-            if (!IsStartMark(mark, rawText, numOfChar)) return false;
-            if (!IsValidStartEnvironment(mark, rawText, numOfChar)) return false;
-            return true;
+            return IsStartMark(mark, rawText, numOfChar) 
+                && IsValidStartEnvironment(mark, rawText, numOfChar);
         }
 
         private bool IsStartMark(string mark, string rawText, int numOfChar)
         {
-            if (rawText.Length < numOfChar + mark.Length + 1) return false;
-            if (!rawText.Substring(numOfChar, mark.Length).Equals(mark)) return false;
-            return true;
+            return rawText.Length >= numOfChar + mark.Length + 1 
+                && rawText.Substring(numOfChar, mark.Length).Equals(mark);
         }
 
         private bool IsValidStartEnvironment(string mark, string rawText, int numOfChar)
@@ -44,16 +40,14 @@ namespace Markdown
 
         public bool IsValidEndMark(string mark, string rawText, int numOfChar)
         {
-            if (!IsEndMark(mark, rawText, numOfChar)) return false;
-            if (!IsValidEndEnvironment(mark, rawText, numOfChar)) return false;
-            return true;
+            return IsEndMark(mark, rawText, numOfChar) 
+                && IsValidEndEnvironment(mark, rawText, numOfChar);
         }
 
         private bool IsEndMark(string mark, string rawText, int numOfChar)
         {
-            if (rawText.Length < numOfChar + mark.Length + 1) return false;
-            if (!rawText.Substring(numOfChar, mark.Length).Equals(mark)) return false;
-            return true;
+            return rawText.Length >= numOfChar + mark.Length + 1 
+                && rawText.Substring(numOfChar, mark.Length).Equals(mark);
         }
 
         private bool IsValidEndEnvironment(string mark, string rawText, int numOfChar)
@@ -73,20 +67,16 @@ namespace Markdown
             return true;
         }
 
-        private bool IsAcceptedExternalChar(char c)
+        private bool IsAcceptedExternalChar(char externalChar)
         {
-            if (marks.Contains(c.ToString())) return false;
-            if (!Char.IsWhiteSpace(c))
-                if (!Char.IsPunctuation(c))
-                    return false;
-            return true;
+            if (marks.Contains(externalChar.ToString())) return false;
+            return char.IsWhiteSpace(externalChar) || char.IsPunctuation(externalChar);
         }
 
-        private bool IsAcceptedInternalChar(char c)
+        private bool IsAcceptedInternalChar(char internalChar)
         {
-            if (marks.Contains(c.ToString())) return false;
-            if (Char.IsWhiteSpace(c)) return false;
-            return true;
+            if (marks.Contains(internalChar.ToString())) return false;
+            return !char.IsWhiteSpace(internalChar);
         }
     }
 }
