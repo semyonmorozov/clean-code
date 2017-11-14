@@ -79,20 +79,6 @@ namespace Markdown
 	        return renderedText;
         }
 
-        private bool TrySetStartMark(RenderingRule rule, string rawText, int numOfChar)
-        {
-            if (!markValidator.IsValidStartMark(rule.Mark, rawText, numOfChar)) return false;
-	        rule.StartOfSelection = numOfChar;
-	        return true;
-	    }
-
-        private bool TrySetEndMark(RenderingRule rule, string rawText, int numOfChar)
-	    {
-	        if (rule.StartOfSelection == -1) return false;
-            if (!markValidator.IsValidEndMark(rule.Mark, rawText, numOfChar)) return false;
-            rule.EndOfSelection = numOfChar + rule.Mark.Length;
-            return true;
-	    }
     }
 
     [TestFixture]

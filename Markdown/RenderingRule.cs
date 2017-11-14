@@ -25,6 +25,23 @@ namespace Markdown
             selection = selection.Substring(0, selection.Length - Mark.Length);
             return selection;
         }
+
+        public bool TrySetStartMark(MarkValidator validator, string rawText, int numOfChar)
+        {
+            if (!validator.IsValidStartMark(Mark, rawText, numOfChar)) return false;
+            Selector.Start = numOfChar;
+            return true;
+        }
+
+        public bool TrySetEndMark(MarkValidator validator, string rawText, int numOfChar)
+        {
+            if (Selector.Start == -1) return false;
+            if (!validator.IsValidEndMark(Mark, rawText, numOfChar)) return false;
+            Selector.End = numOfChar + Mark.Length;
+            return true;
+        }
+
+
     }
 
     
