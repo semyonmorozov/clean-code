@@ -43,42 +43,8 @@ namespace Markdown
                     }
                 }
             }
-
             return markdown;
 		}
-
-	    private string RenderWithPriority(RenderingRule rule, string rawText)
-	    {
-	        string renderedText;
-            
-            var selection = new Renderer(rule, rawText).GetSelection();
-	        foreach (var r in renderingRules)
-	        {
-	            if (selection.Contains(r.ClosingTag)&&!selection.Contains(r.OpeningTag))
-	            {
-	                rule.StartOfSelection += r.OpeningTag.Length-1;
-                    return new Renderer(rule,rawText).DeleteMarks();
-                }
-            }
-	        var renderer = new Renderer(rule, rawText);
-
-            if (renderingRules.Where(r => r.StartOfSelection != -1).Any(r => r.PriorityLevel < rule.PriorityLevel))
-	        {
-	            var endOfSelection = rule.EndOfSelection;
-	            var startOfSelection = rule.StartOfSelection;
-	            renderedText = renderer.DeleteMarks();
-	            var elapsedRules = renderingRules.Where(r => (r.StartOfSelection < endOfSelection) &&
-	                                                (r.StartOfSelection > startOfSelection)).ToList();
-	            foreach (var r in elapsedRules)
-	                r.StartOfSelection -= rule.Mark.Length;
-	            return renderedText;
-            }
-	        
-	        renderedText = renderer.Render();
-	        rule.ResetSelection();
-	        return renderedText;
-        }
-
     }
 
     [TestFixture]

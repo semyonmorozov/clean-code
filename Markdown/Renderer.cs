@@ -1,47 +1,80 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace Markdown
 {
     class Renderer
     {
-        public readonly int Start;
-        public readonly int End;
-        public readonly string Mark;
-        public readonly string OpeningTag;
-        public readonly string ClosingTag;
-        public readonly string RawText;
+        public readonly List<RenderingRule> RenderingRules;
 
-        public Renderer(RenderingRule renderingRule, string rawText)
+        public Renderer(List<RenderingRule> renderingRules)
         {
-            Start = renderingRule.StartOfSelection;
-            End = renderingRule.EndOfSelection;
-            Mark = renderingRule.Mark;
-            OpeningTag = renderingRule.OpeningTag;
-            ClosingTag = renderingRule.ClosingTag;
-            RawText = rawText;
+            RenderingRules = renderingRules;
         }
 
-        public string Render()
+        public string RenderWithPriority(RenderingRule rule, string rawText)
         {
-            var selection = GetSelection();
-            var tagedSelection = String.Concat(OpeningTag, selection, ClosingTag); 
-            var renderedText = RawText.Replace(tagedSelection, Start, End - Start);
+            string renderedText;
+
+            var selection = rule.GetSelection(rawText);
+            var intersectedRules = RenderingRules.Where(r => IntersectedWithRenderedRule(selection, r)).ToList();
+            if (intersectedRules.Any())
+            {
+                foreach (var r in intersectedRules)
+                    rule.Selector.Start += r.OpeningTag.Length - 1;
+                
+                return DeleteMarks(rule, rawText);
+            }
+
+            if (IntersectedWithHigherPriorityRule(rule))
+            {
+                var oldEndOfSelection = rule.Selector.End;
+                var oldStartOfSelection = rule.Selector.Start;
+                renderedText = DeleteMarks(rule, rawText);
+                MoveIntersectedStarts(rule, oldStartOfSelection, oldEndOfSelection);
+                return renderedText;
+            }
+
+            renderedText = Render(rule, rawText);
+            rule.Selector.ResetSelection();
             return renderedText;
         }
 
-        public string DeleteMarks()
+        private void MoveIntersectedStarts(RenderingRule rule,int oldStartOfSelection, int oldEndOfSelection)
         {
-            var selection = GetSelection();
-            var renderedText = RawText.Replace(selection, Start, End - Start);
+            var intersectedRules = RenderingRules.Where(r => r.Selector.Start < oldEndOfSelection)
+                .Where(r => r.Selector.Start > oldStartOfSelection)
+                .ToList();
+            foreach (var r in intersectedRules)
+                r.Selector.Start -= rule.Mark.Length;
+        }
+
+        private string Render(RenderingRule rule, string rawText)
+        {
+            var selection = rule.GetSelection(rawText);
+            var tagedSelection = String.Concat(rule.OpeningTag, selection, rule.ClosingTag); 
+            var renderedText = rawText.Replace(tagedSelection, rule.Selector.Start, rule.Selector.GetLength());
             return renderedText;
         }
 
-        public string GetSelection()
+        private string DeleteMarks(RenderingRule rule, string rawText)
         {
-            var selection = RawText.Substring(Start, End - Start);
-            selection = selection.Substring(Mark.Length);
-            selection = selection.Substring(0, selection.Length - Mark.Length);
-            return selection;
+            var selection = rule.GetSelection(rawText);
+            var renderedText = rawText.Replace(selection, rule.Selector.Start, rule.Selector.GetLength());
+            return renderedText;
+        }
+
+        private bool IntersectedWithRenderedRule(string selection, RenderingRule rule)
+        {
+            return selection.Contains(rule.ClosingTag)
+                   && !selection.Contains(rule.OpeningTag);
+        }
+
+        private bool IntersectedWithHigherPriorityRule(RenderingRule rule)
+        {
+            return RenderingRules.Where(r => r.Selector.Start != -1).Any(r => r.PriorityLevel < rule.PriorityLevel);
         }
     }
 
@@ -49,8 +82,8 @@ namespace Markdown
     {
         public static string Replace(this string rawString, string newPart, int start, int lenght)
         {
-            return rawString.Remove(start, lenght)
-                .Insert(start, newPart);
+            var builder = new StringBuilder(rawString);
+            return builder.Remove(start, lenght).Insert(start, newPart).ToString();
         }
     }
 }
