@@ -163,5 +163,81 @@ namespace Markdown
 	        md.Render(rawText).Should().Be(expectedStr);
         }
         
+
+    }
+
+    [TestFixture]
+    public class Md_Should_Have_LinearComplexity
+    {
+        private Stopwatch stopWatch;
+        private Md md;
+        [SetUp]
+        public void SetUp()
+        {
+            stopWatch = new Stopwatch();
+            var htmlRules = new List<RenderingRule>
+            {
+                new RenderingRule("_","<em>","</em>",1),
+                new RenderingRule("__","<strong>","</strong>",2)
+            };
+            md = new Md(htmlRules);
+        }
+
+        [Test]
+        public void OnShortString()
+        {
+            var rawString = ReadStringFromResource("StringsForTests.7000 chars.txt");
+            stopWatch.Start();
+            var renderedText = md.Render(rawString);
+            stopWatch.Stop();
+            var ts = stopWatch.ElapsedMilliseconds;
+            TestContext.WriteLine("Runtime: "+ts+"ms");
+            ts.Should().BeLessThan(15);
+        }
+
+        [Test]
+        public void OnLongString()
+        {
+            var rawString = ReadStringFromResource("StringsForTests.70 000 chars.txt");
+            stopWatch.Start();
+            var renderedText = md.Render(rawString);
+            stopWatch.Stop();
+            var ts = stopWatch.ElapsedMilliseconds;
+            TestContext.WriteLine("Runtime: " + ts + "ms");
+            ts.Should().BeLessThan(200);
+        }
+
+        [Test]
+        public void OnVeryLongString()
+        {
+            var rawString = ReadStringFromResource("StringsForTests.350 000 chars.txt");
+            stopWatch.Start();
+            var renderedText = md.Render(rawString);
+            stopWatch.Stop();
+            var ts = stopWatch.ElapsedMilliseconds;
+            TestContext.WriteLine("Runtime: " + ts + "ms");
+            ts.Should().BeLessThan(4500);
+        }
+
+
+        private string ReadStringFromResource(string resourceName)
+        {
+            var text = "";
+            var assembly = Assembly.GetExecutingAssembly();
+            using (var textStreamReader =
+                new StreamReader(assembly.GetManifestResourceStream("Markdown." + resourceName)))
+            {
+                while (true)
+                {
+                    string temp = textStreamReader.ReadLine();
+                    if (temp == null) break;
+                    text += temp;
+                }
+            }
+                
+            
+            return text;
+        }
+
     }
 }
