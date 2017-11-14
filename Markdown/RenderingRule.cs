@@ -1,30 +1,29 @@
-﻿using System;
-
+﻿
 namespace Markdown
 {
-    public class RenderingRule
+    class RenderingRule
     {
         public readonly string Mark;
         public readonly string OpeningTag;
         public readonly string ClosingTag;
         public readonly int PriorityLevel;
-        public int StartOfSelection { get; set; }
-        public int EndOfSelection { get; set; }
+        public StringSelector Selector;
 
         public RenderingRule(string mark, string openingTag, string closingTag, int priorotyLevel)
         {
-            StartOfSelection = -1;
-            EndOfSelection = -1;
             Mark = mark;
             OpeningTag = openingTag;
             ClosingTag = closingTag;
             PriorityLevel = priorotyLevel;
+            Selector = new StringSelector();
         }
 
-        public void ResetSelection()
+        public string GetSelection(string rawText)
         {
-            StartOfSelection = -1;
-            EndOfSelection = -1;
+            var selection = rawText.Substring(Selector.Start, Selector.GetLength());
+            selection = selection.Substring(Mark.Length);
+            selection = selection.Substring(0, selection.Length - Mark.Length);
+            return selection;
         }
     }
 
