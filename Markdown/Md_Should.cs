@@ -146,21 +146,21 @@ namespace Markdown
             md = new Md(htmlRules);
         }
 
-        [Test, MaxTime(30)]
+        [Test, Timeout(30)]
         public void OnShortString()
         {
             var rawString = ReadStringFromResource("StringsForTests.7000 chars.txt");
             md.Render(rawString);
         }
 
-        [Test, MaxTime(300)]
+        [Test, Timeout(300)]
         public void OnLongString()
         {
             var rawString = ReadStringFromResource("StringsForTests.70 000 chars.txt");
             md.Render(rawString);
         }
 
-        [Test, MaxTime(5000)]
+        [Test, Timeout(5000)]
         public void OnVeryLongString()
         {
             var rawString = ReadStringFromResource("StringsForTests.350 000 chars.txt");
